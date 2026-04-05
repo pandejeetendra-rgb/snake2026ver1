@@ -6,15 +6,14 @@
   <title>Cyber Snake: Types of Cyber Crime</title>
   <style>
     :root {
-      --bg: #0f172a;
       --panel: #111827;
       --panel-2: #1f2937;
       --text: #f8fafc;
       --muted: #cbd5e1;
-      --accent: #22c55e;
-      --danger: #ef4444;
+      --success: #16a34a;
+      --danger: #dc2626;
       --info: #2563eb;
-      --cell: min(5.5vw, 22px);
+      --button: #334155;
     }
 
     * { box-sizing: border-box; }
@@ -22,7 +21,7 @@
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(180deg, #0b1220, #111827);
+      background: linear-gradient(180deg, #071226, #0f172a);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -46,7 +45,7 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     }
 
-    h1, h2, h3, p { margin: 0; }
+    h1, h2, p { margin: 0; }
 
     .title {
       font-size: 1.2rem;
@@ -54,11 +53,13 @@
       margin-bottom: 6px;
     }
 
-    .subtitle {
+    .subtitle, .small {
       font-size: 0.92rem;
       color: var(--muted);
       line-height: 1.45;
     }
+
+    .small { font-size: 0.85rem; }
 
     .stats {
       display: grid;
@@ -99,6 +100,20 @@
       height: auto;
       max-width: 400px;
       touch-action: none;
+      display: block;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .button-row {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .controls-grid {
@@ -110,6 +125,8 @@
       user-select: none;
     }
 
+    .ctrl-empty { visibility: hidden; }
+
     .ctrl-btn, .action-btn, .option-btn {
       border: none;
       border-radius: 14px;
@@ -117,7 +134,7 @@
       font-size: 1rem;
       font-weight: 700;
       color: white;
-      background: #334155;
+      background: var(--button);
       cursor: pointer;
       min-height: 52px;
     }
@@ -126,24 +143,10 @@
       transform: scale(0.98);
     }
 
-    .ctrl-empty { visibility: hidden; }
-
-    .actions {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .action-btn.start { background: #16a34a; }
-    .action-btn.pause { background: #2563eb; }
-    .action-btn.reset { background: #dc2626; }
+    .action-btn.start { background: var(--success); }
+    .action-btn.pause { background: var(--info); }
+    .action-btn.reset { background: var(--danger); }
     .action-btn.secondary { background: #475569; }
-
-    .small {
-      font-size: 0.85rem;
-      color: var(--muted);
-      line-height: 1.45;
-    }
 
     .file-row {
       display: grid;
@@ -262,22 +265,10 @@
     </section>
 
     <section class="card stats">
-      <div class="stat">
-        <div class="label">Score</div>
-        <div class="value" id="scoreValue">0</div>
-      </div>
-      <div class="stat">
-        <div class="label">Length</div>
-        <div class="value" id="lengthValue">1</div>
-      </div>
-      <div class="stat">
-        <div class="label">Correct</div>
-        <div class="value" id="correctValue">0</div>
-      </div>
-      <div class="stat">
-        <div class="label">Asked</div>
-        <div class="value" id="askedValue">0</div>
-      </div>
+      <div class="stat"><div class="label">Score</div><div class="value" id="scoreValue">0</div></div>
+      <div class="stat"><div class="label">Length</div><div class="value" id="lengthValue">1</div></div>
+      <div class="stat"><div class="label">Correct</div><div class="value" id="correctValue">0</div></div>
+      <div class="stat"><div class="label">Asked</div><div class="value" id="askedValue">0</div></div>
     </section>
 
     <section class="card">
@@ -293,7 +284,7 @@
         <button class="action-btn pause" id="pauseBtn">Pause</button>
         <button class="action-btn reset" id="resetBtn">Restart</button>
       </div>
-      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <div class="button-row">
         <button class="action-btn secondary" id="wrapToggleBtn">Wrap: ON</button>
       </div>
     </section>
@@ -357,12 +348,10 @@
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-
     const scoreValue = document.getElementById('scoreValue');
     const lengthValue = document.getElementById('lengthValue');
     const correctValue = document.getElementById('correctValue');
     const askedValue = document.getElementById('askedValue');
-
     const startBtn = document.getElementById('startBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -370,7 +359,6 @@
     const jsonFileInput = document.getElementById('jsonFileInput');
     const fileStatus = document.getElementById('fileStatus');
     const wrapToggleBtn = document.getElementById('wrapToggleBtn');
-
     const overlay = document.getElementById('questionOverlay');
     const questionMeta = document.getElementById('questionMeta');
     const questionText = document.getElementById('questionText');
@@ -381,22 +369,21 @@
 
     const CELL = canvas.width / GRID_SIZE;
 
-    let snake = [{ x: 7, y: 7 }];
-    let direction = { x: 1, y: 0 };
-    let nextDirection = { x: 1, y: 0 };
-    let food = { x: 10, y: 10 };
-    let score = 0;
-    let correctAnswers = 0;
-    let askedQuestions = 0;
-    let running = false;
-    let paused = false;
-    let gameOver = false;
-    let stepTimer = null;
+    let snake;
+    let direction;
+    let nextDirection;
+    let food;
+    let score;
+    let correctAnswers;
+    let askedQuestions;
+    let running;
+    let paused;
+    let gameOver;
+    let stepTimer;
     let questionPool = [];
     let usedQuestionIds = new Set();
-    let pendingGrowth = 0;
-    let currentQuestion = null;
-    let currentQuestionAttempt = 0;
+    let pendingGrowth;
+    let currentQuestionAttempt;
 
     function shuffle(array) {
       const a = [...array];
@@ -407,10 +394,11 @@
       return a;
     }
 
-    function resetQuestionCycle() { usedQuestionIds.clear(); }
+    function resetQuestionCycle() {
+      usedQuestionIds.clear();
+    }
 
     function getAvailableQuestions() {
-      if (questionPool.length === 0) return [];
       let available = questionPool.filter(q => !usedQuestionIds.has(q.id));
       if (available.length === 0) {
         resetQuestionCycle();
@@ -430,7 +418,10 @@
     function setFood() {
       let valid = false;
       while (!valid) {
-        const candidate = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) };
+        const candidate = {
+          x: Math.floor(Math.random() * GRID_SIZE),
+          y: Math.floor(Math.random() * GRID_SIZE)
+        };
         valid = !snake.some(seg => seg.x === candidate.x && seg.y === candidate.y);
         if (valid) food = candidate;
       }
@@ -443,7 +434,7 @@
       askedValue.textContent = askedQuestions;
     }
 
-    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    function roundRect(ctx, x, y, width, height, radius, fill) {
       if (typeof radius === 'number') radius = { tl: radius, tr: radius, br: radius, bl: radius };
       ctx.beginPath();
       ctx.moveTo(x + radius.tl, y);
@@ -457,14 +448,13 @@
       ctx.quadraticCurveTo(x, y, x + radius.tl, y);
       ctx.closePath();
       if (fill) ctx.fill();
-      if (stroke) ctx.stroke();
     }
 
     function drawCell(x, y, color, radius = 4) {
       const px = x * CELL;
       const py = y * CELL;
       ctx.fillStyle = color;
-      roundRect(ctx, px + 1, py + 1, CELL - 2, CELL - 2, radius, true, false);
+      roundRect(ctx, px + 1, py + 1, CELL - 2, CELL - 2, radius, true);
     }
 
     function drawCenterText(text, color) {
@@ -579,21 +569,25 @@
       correctAnswers = 0;
       askedQuestions = 0;
       pendingGrowth = 0;
-      currentQuestion = null;
       currentQuestionAttempt = 0;
       running = false;
       paused = false;
       gameOver = false;
       pauseBtn.textContent = 'Pause';
+      closeQuestionOverlay();
       setFood();
       updateStats();
       drawBoard();
-      closeQuestionOverlay();
       stopLoop();
     }
 
     function changeDirection(dir) {
-      const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+      const map = {
+        up: { x: 0, y: -1 },
+        down: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 }
+      };
       const newDir = map[dir];
       if (!newDir) return;
       if (snake.length > 1 && newDir.x === -direction.x && newDir.y === -direction.y) return;
@@ -602,8 +596,8 @@
 
     function pauseForQuestion() {
       paused = true;
-      currentQuestion = getNextQuestion();
       currentQuestionAttempt = 0;
+      const currentQuestion = getNextQuestion();
       if (!currentQuestion) {
         paused = false;
         return;
@@ -615,7 +609,7 @@
     }
 
     function openQuestionOverlay(question) {
-      questionMeta.textContent = `Question ${askedQuestions} of learning round`;
+      questionMeta.textContent = `Question ${askedQuestions}`;
       questionText.textContent = question.question;
       feedbackBox.className = 'feedback';
       feedbackBox.textContent = '';
@@ -648,7 +642,7 @@
     function setOptionButtonsEnabled(enabled) {
       [...optionsWrap.querySelectorAll('.option-btn')].forEach(btn => {
         btn.disabled = !enabled;
-        if (!enabled) btn.classList.add('disabled'); else btn.classList.remove('disabled');
+        btn.classList.toggle('disabled', !enabled);
       });
     }
 
@@ -672,15 +666,14 @@
         feedbackBox.textContent = `Correct. ${question.explanation} The snake grows because the answer is correct.`;
         continueBtn.classList.remove('hidden');
         retryBtn.classList.add('hidden');
-        updateStats();
       } else {
         score = Math.max(0, score - WRONG_PENALTY);
         feedbackBox.classList.add('wrong');
         feedbackBox.textContent = `Not correct. ${question.explanation} You can retry once, or continue without growth.`;
         retryBtn.classList.toggle('hidden', currentQuestionAttempt >= 2);
         continueBtn.classList.remove('hidden');
-        updateStats();
       }
+      updateStats();
     }
 
     function retryQuestion() {
@@ -688,8 +681,7 @@
       feedbackBox.textContent = '';
       retryBtn.classList.add('hidden');
       continueBtn.classList.add('hidden');
-      const optionButtons = [...optionsWrap.querySelectorAll('.option-btn')];
-      optionButtons.forEach(btn => {
+      [...optionsWrap.querySelectorAll('.option-btn')].forEach(btn => {
         btn.disabled = false;
         btn.className = 'option-btn';
       });
@@ -697,18 +689,16 @@
 
     function continueAfterQuestion() {
       const wasCorrect = feedbackBox.classList.contains('correct');
-      if (!wasCorrect && pendingGrowth > 0) {
-        pendingGrowth = 0;
-      }
       closeQuestionOverlay();
+
       if (wasCorrect && pendingGrowth > 0) {
-        // do not remove tail on next move effect by adding one segment now at tail position
         const tail = snake[snake.length - 1];
         snake.push({ ...tail });
         pendingGrowth = Math.max(0, pendingGrowth - 1);
       } else {
         pendingGrowth = 0;
       }
+
       if (!gameOver) {
         paused = false;
         running = true;
@@ -720,8 +710,13 @@
     }
 
     function validateQuestionBank(data) {
-      if (!Array.isArray(data) || data.length === 0) return false;
-      return data.every(q => typeof q.id === 'string' && typeof q.question === 'string' && Array.isArray(q.options) && q.options.length === 4 && typeof q.correctAnswer === 'string' && typeof q.explanation === 'string');
+      return Array.isArray(data) && data.length > 0 && data.every(q =>
+        typeof q.id === 'string' &&
+        typeof q.question === 'string' &&
+        Array.isArray(q.options) && q.options.length === 4 &&
+        typeof q.correctAnswer === 'string' &&
+        typeof q.explanation === 'string'
+      );
     }
 
     async function loadQuestionsFromFile(file) {
@@ -732,7 +727,7 @@
         questionPool = parsed;
         resetQuestionCycle();
         fileStatus.textContent = `Loaded ${parsed.length} questions from ${file.name}`;
-      } catch (error) {
+      } catch {
         fileStatus.textContent = 'Could not load the selected JSON file. Using built-in questions.';
         questionPool = BUILT_IN_QUESTIONS;
         resetQuestionCycle();
@@ -765,11 +760,13 @@
 
     let touchStartX = 0;
     let touchStartY = 0;
+
     canvas.addEventListener('touchstart', (e) => {
       const t = e.changedTouches[0];
       touchStartX = t.clientX;
       touchStartY = t.clientY;
     }, { passive: true });
+
     canvas.addEventListener('touchend', (e) => {
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStartX;
@@ -780,779 +777,7 @@
 
     function init() {
       questionPool = BUILT_IN_QUESTIONS;
-      setFood();
-      updateStats();
-      drawBoard();
-    }
-
-    init();
-  </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Cyber Snake: Types of Cyber Crime</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel-2: #1f2937;
-      --text: #f8fafc;
-      --muted: #cbd5e1;
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --info: #2563eb;
-      --cell: min(5.5vw, 22px);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(180deg, #0b1220, #111827);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 12px;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 460px;
-      display: grid;
-      gap: 10px;
-      align-content: start;
-    }
-
-    .card {
-      background: rgba(17, 24, 39, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    }
-
-    h1, h2, h3, p { margin: 0; }
-
-    .title {
-      font-size: 1.2rem;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .subtitle {
-      font-size: 0.92rem;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      text-align: center;
-    }
-
-    .stat {
-      background: var(--panel-2);
-      border-radius: 12px;
-      padding: 10px 6px;
-    }
-
-    .stat .label {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .stat .value {
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    .canvas-wrap {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 8px 0;
-    }
-
-    canvas {
-      background: #020617;
-      border: 2px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      width: 100%;
-      height: auto;
-      max-width: 400px;
-      touch-action: none;
-    }
-
-    .controls-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      max-width: 300px;
-      margin: 0 auto;
-      user-select: none;
-    }
-
-    .ctrl-btn, .action-btn, .option-btn {
-      border: none;
-      border-radius: 14px;
-      padding: 14px 12px;
-      font-size: 1rem;
-      font-weight: 700;
-      color: white;
-      background: #334155;
-      cursor: pointer;
-      min-height: 52px;
-    }
-
-    .ctrl-btn:active, .action-btn:active, .option-btn:active {
-      transform: scale(0.98);
-    }
-
-    .ctrl-empty { visibility: hidden; }
-
-    .actions {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .action-btn.start { background: #16a34a; }
-    .action-btn.pause { background: #2563eb; }
-    .action-btn.reset { background: #dc2626; }
-    .action-btn.secondary { background: #475569; }
-
-    .small {
-      font-size: 0.85rem;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    .file-row {
-      display: grid;
-      gap: 8px;
-    }
-
-    input[type="file"] {
-      width: 100%;
-      color: var(--muted);
-      background: var(--panel-2);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 10px;
-    }
-
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 6, 23, 0.82);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 14px;
-      z-index: 999;
-    }
-
-    .overlay.show { display: flex; }
-
-    .modal {
-      width: 100%;
-      max-width: 520px;
-      background: #111827;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.45);
-      max-height: 90vh;
-      overflow: auto;
-    }
-
-    .question-meta {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
-
-    .question-text {
-      font-size: 1.05rem;
-      font-weight: 700;
-      line-height: 1.45;
-      margin-bottom: 14px;
-    }
-
-    .options {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .option-btn {
-      background: #1f2937;
-      text-align: left;
-      font-size: 0.95rem;
-      line-height: 1.35;
-      display: flex;
-      align-items: center;
-    }
-
-    .option-btn.correct { background: #15803d; }
-    .option-btn.wrong { background: #b91c1c; }
-    .option-btn.disabled { opacity: 0.88; cursor: not-allowed; }
-
-    .feedback {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: 12px;
-      font-size: 0.92rem;
-      line-height: 1.5;
-      background: #1f2937;
-      display: none;
-    }
-
-    .feedback.show { display: block; }
-    .feedback.correct { border-left: 4px solid #22c55e; }
-    .feedback.wrong { border-left: 4px solid #ef4444; }
-
-    .modal-actions {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-
-    .hidden { display: none !important; }
-
-    .footer-note {
-      text-align: center;
-      font-size: 0.78rem;
-      color: var(--muted);
-      padding-bottom: 6px;
-    }
-
-    @media (max-width: 420px) {
-      .stats { grid-template-columns: repeat(2, 1fr); }
-      .actions { grid-template-columns: 1fr; }
-      .options { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="app">
-    <section class="card">
-      <h1 class="title">Cyber Snake</h1>
-      <p class="subtitle">A simple mobile-first learning game on <strong>Types of Cyber Crime</strong>. Collect a cyber token, answer a question, and grow the snake only when the answer is correct.</p>
-    </section>
-
-    <section class="card stats">
-      <div class="stat">
-        <div class="label">Score</div>
-        <div class="value" id="scoreValue">0</div>
-      </div>
-      <div class="stat">
-        <div class="label">Length</div>
-        <div class="value" id="lengthValue">1</div>
-      </div>
-      <div class="stat">
-        <div class="label">Correct</div>
-        <div class="value" id="correctValue">0</div>
-      </div>
-      <div class="stat">
-        <div class="label">Asked</div>
-        <div class="value" id="askedValue">0</div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="canvas-wrap">
-        <canvas id="gameCanvas" width="400" height="400" aria-label="Snake game board"></canvas>
-      </div>
-      <p class="small">Logic: collect token → answer 1 question with 4 options → correct answer grows the snake and adds more score.</p>
-    </section>
-
-    <section class="card">
-      <div class="actions">
-        <button class="action-btn start" id="startBtn">Start</button>
-        <button class="action-btn pause" id="pauseBtn">Pause</button>
-        <button class="action-btn reset" id="resetBtn">Restart</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="controls-grid">
-        <div class="ctrl-empty">.</div>
-        <button class="ctrl-btn" data-dir="up">▲</button>
-        <div class="ctrl-empty">.</div>
-        <button class="ctrl-btn" data-dir="left">◀</button>
-        <button class="ctrl-btn" data-dir="down">▼</button>
-        <button class="ctrl-btn" data-dir="right">▶</button>
-      </div>
-    </section>
-
-    <section class="card file-row">
-      <h2 class="title" style="font-size:1rem;">Load your own JSON questions</h2>
-      <p class="small">Each question must have exactly 4 options. Required keys: <strong>id</strong>, <strong>question</strong>, <strong>options</strong>, <strong>correctAnswer</strong>, <strong>explanation</strong>.</p>
-      <input type="file" id="jsonFileInput" accept="application/json" />
-      <p class="small" id="fileStatus">Using built-in question bank.</p>
-    </section>
-
-    <p class="footer-note">Designed for low cognitive load and smartphone learning.</p>
-  </div>
-
-  <div class="overlay" id="questionOverlay" aria-hidden="true">
-    <div class="modal">
-      <div class="question-meta" id="questionMeta">Question</div>
-      <div class="question-text" id="questionText"></div>
-      <div class="options" id="optionsWrap"></div>
-      <div class="feedback" id="feedbackBox"></div>
-      <div class="modal-actions">
-        <button class="action-btn secondary hidden" id="retryBtn">Retry</button>
-        <button class="action-btn start hidden" id="continueBtn">Continue</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const GRID_SIZE = 16;
-    const BASE_SPEED_MS = 220;
-    const TOKEN_POINTS = 5;
-    const CORRECT_BONUS = 10;
-    const WRONG_PENALTY = 2;
-
-    const BUILT_IN_QUESTIONS = [
-      { id: "Q1", question: "What is cyber stalking?", options: ["Monitoring network traffic", "Harassing someone using internet", "Stealing software", "Blocking a website"], correctAnswer: "Harassing someone using internet", explanation: "Cyber stalking means threatening, stalking, or harassing a person through internet-based tools." },
-      { id: "Q2", question: "Phishing is mainly used to:", options: ["Improve system speed", "Steal sensitive information", "Fix malware", "Encrypt files"], correctAnswer: "Steal sensitive information", explanation: "Phishing tries to collect personal details such as passwords, usernames, or bank information by pretending to be trustworthy." },
-      { id: "Q3", question: "Software piracy refers to:", options: ["Legal software sharing", "Copying software illegally", "Installing antivirus", "Encrypting data"], correctAnswer: "Copying software illegally", explanation: "Software piracy is unauthorized reproduction or distribution of software." },
-      { id: "Q4", question: "Cyber terrorism is:", options: ["Online shopping fraud", "Use of computers for political attacks", "Gaming addiction", "Sending spam emails"], correctAnswer: "Use of computers for political attacks", explanation: "Cyber terrorism uses computer resources to intimidate or attack for political or social objectives." },
-      { id: "Q5", question: "Hacking means:", options: ["Improving security only", "Unauthorized access to systems", "Sending emails", "Deleting cookies"], correctAnswer: "Unauthorized access to systems", explanation: "Hacking means accessing or modifying a system beyond authorized limits." },
-      { id: "Q6", question: "Spamming refers to:", options: ["Sending bulk unsolicited messages", "Encrypting emails", "Blocking websites", "Repairing systems"], correctAnswer: "Sending bulk unsolicited messages", explanation: "Spamming means sending unwanted and usually large-volume messages." },
-      { id: "Q7", question: "Denial of Service attack aims to:", options: ["Improve network performance", "Crash or overload a system", "Secure user data", "Back up files"], correctAnswer: "Crash or overload a system", explanation: "A Denial of Service attack floods a network or service so that normal users cannot access it." },
-      { id: "Q8", question: "Salami attack involves:", options: ["Large data theft in one step", "Small unnoticed transactions", "Email hacking", "Password cracking only"], correctAnswer: "Small unnoticed transactions", explanation: "A salami attack uses many very small changes or withdrawals that may go unnoticed at first." },
-      { id: "Q9", question: "Data diddling means:", options: ["Deleting all files", "Changing data before processing", "Encrypting data", "Sending spam"], correctAnswer: "Changing data before processing", explanation: "Data diddling means altering data before it is entered or processed by a system." },
-      { id: "Q10", question: "Email spoofing is:", options: ["Blocking emails", "Sending fake emails with forged identity", "Deleting emails", "Encrypting emails"], correctAnswer: "Sending fake emails with forged identity", explanation: "Email spoofing changes email header information so the message appears to come from another source." },
-      { id: "Q11", question: "Online auction fraud involves:", options: ["Selling genuine goods safely", "Fake online sales or non-delivery", "Improving security", "Encrypting payments"], correctAnswer: "Fake online sales or non-delivery", explanation: "In online auction fraud, people are tricked into paying for items that may never be delivered." },
-      { id: "Q12", question: "Cyber squatting means:", options: ["Blocking websites permanently", "Registering domain names for resale", "Hacking servers", "Sending spam"], correctAnswer: "Registering domain names for resale", explanation: "Cyber squatting means reserving a domain related to someone else's trademark and later selling it at a higher price." }
-    ];
-
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const scoreValue = document.getElementById('scoreValue');
-    const lengthValue = document.getElementById('lengthValue');
-    const correctValue = document.getElementById('correctValue');
-    const askedValue = document.getElementById('askedValue');
-
-    const startBtn = document.getElementById('startBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const ctrlButtons = document.querySelectorAll('.ctrl-btn');
-    const jsonFileInput = document.getElementById('jsonFileInput');
-    const fileStatus = document.getElementById('fileStatus');
-
-    const overlay = document.getElementById('questionOverlay');
-    const questionMeta = document.getElementById('questionMeta');
-    const questionText = document.getElementById('questionText');
-    const optionsWrap = document.getElementById('optionsWrap');
-    const feedbackBox = document.getElementById('feedbackBox');
-    const continueBtn = document.getElementById('continueBtn');
-    const retryBtn = document.getElementById('retryBtn');
-
-    const CELL = canvas.width / GRID_SIZE;
-
-    let snake = [{ x: 7, y: 7 }];
-    let direction = { x: 1, y: 0 };
-    let nextDirection = { x: 1, y: 0 };
-    let food = { x: 10, y: 10 };
-    let score = 0;
-    let correctAnswers = 0;
-    let askedQuestions = 0;
-    let running = false;
-    let paused = false;
-    let gameOver = false;
-    let stepTimer = null;
-    let questionPool = [];
-    let usedQuestionIds = new Set();
-    let pendingGrowth = 0;
-    let currentQuestion = null;
-    let currentQuestionAttempt = 0;
-
-    function shuffle(array) {
-      const a = [...array];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-
-    function resetQuestionCycle() { usedQuestionIds.clear(); }
-
-    function getAvailableQuestions() {
-      if (questionPool.length === 0) return [];
-      let available = questionPool.filter(q => !usedQuestionIds.has(q.id));
-      if (available.length === 0) {
-        resetQuestionCycle();
-        available = [...questionPool];
-      }
-      return shuffle(available);
-    }
-
-    function getNextQuestion() {
-      const available = getAvailableQuestions();
-      if (!available.length) return null;
-      const q = available[0];
-      usedQuestionIds.add(q.id);
-      return { ...q, options: shuffle(q.options) };
-    }
-
-    function setFood() {
-      let valid = false;
-      while (!valid) {
-        const candidate = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) };
-        valid = !snake.some(seg => seg.x === candidate.x && seg.y === candidate.y);
-        if (valid) food = candidate;
-      }
-    }
-
-    function updateStats() {
-      scoreValue.textContent = score;
-      lengthValue.textContent = snake.length;
-      correctValue.textContent = correctAnswers;
-      askedValue.textContent = askedQuestions;
-    }
-
-    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
-      if (typeof radius === 'number') radius = { tl: radius, tr: radius, br: radius, bl: radius };
-      ctx.beginPath();
-      ctx.moveTo(x + radius.tl, y);
-      ctx.lineTo(x + width - radius.tr, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-      ctx.lineTo(x + width, y + height - radius.br);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
-      ctx.lineTo(x + radius.bl, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-      ctx.lineTo(x, y + radius.tl);
-      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-      ctx.closePath();
-      if (fill) ctx.fill();
-      if (stroke) ctx.stroke();
-    }
-
-    function drawCell(x, y, color, radius = 4) {
-      const px = x * CELL;
-      const py = y * CELL;
-      ctx.fillStyle = color;
-      roundRect(ctx, px + 1, py + 1, CELL - 2, CELL - 2, radius, true, false);
-    }
-
-    function drawCenterText(text, color) {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fillRect(40, canvas.height / 2 - 28, canvas.width - 80, 56);
-      ctx.fillStyle = color;
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 8);
-    }
-
-    function drawBoard() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (let i = 0; i < GRID_SIZE; i++) {
-        for (let j = 0; j < GRID_SIZE; j++) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-          ctx.strokeRect(i * CELL, j * CELL, CELL, CELL);
-        }
-      }
-
-      drawCell(food.x, food.y, '#22c55e', 5);
-      snake.forEach((segment, index) => drawCell(segment.x, segment.y, index === 0 ? '#38bdf8' : '#60a5fa', 5));
-
-      if (!running && !gameOver) drawCenterText('Tap Start to Begin', 'rgba(255,255,255,0.85)');
-      if (paused && !gameOver && !overlay.classList.contains('show')) drawCenterText('Paused', 'rgba(255,255,255,0.85)');
-      if (gameOver) drawCenterText('Game Over', '#fca5a5');
-    }
-
-    function step() {
-      if (!running || paused || gameOver) return;
-
-      direction = nextDirection;
-      const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
-
-      if (head.x < 0 || head.y < 0 || head.x >= GRID_SIZE || head.y >= GRID_SIZE || snake.some(seg => seg.x === head.x && seg.y === head.y)) {
-        endGame();
-        return;
-      }
-
-      snake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        score += TOKEN_POINTS;
-        pendingGrowth += 1;
-        setFood();
-        updateStats();
-        pauseForQuestion();
-      } else {
-        snake.pop();
-      }
-
-      updateStats();
-      drawBoard();
-    }
-
-    function startLoop() {
-      stopLoop();
-      stepTimer = setInterval(step, BASE_SPEED_MS);
-    }
-
-    function stopLoop() {
-      if (stepTimer) clearInterval(stepTimer);
-      stepTimer = null;
-    }
-
-    function startGame() {
-      if (gameOver) resetGame();
-      running = true;
-      paused = false;
-      pauseBtn.textContent = 'Pause';
-      startLoop();
-      drawBoard();
-    }
-
-    function pauseGame() {
-      if (!running || gameOver || overlay.classList.contains('show')) return;
-      paused = !paused;
-      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
-      drawBoard();
-    }
-
-    function endGame() {
-      running = false;
-      gameOver = true;
-      stopLoop();
-      drawBoard();
-      setTimeout(() => {
-        alert(`Game Over\nScore: ${score}\nFinal Length: ${snake.length}\nQuestions Answered: ${askedQuestions}\nCorrect Answers: ${correctAnswers}`);
-      }, 100);
-    }
-
-    function resetGame() {
-      snake = [{ x: 7, y: 7 }];
-      direction = { x: 1, y: 0 };
-      nextDirection = { x: 1, y: 0 };
-      score = 0;
-      correctAnswers = 0;
-      askedQuestions = 0;
-      pendingGrowth = 0;
-      currentQuestion = null;
-      currentQuestionAttempt = 0;
-      running = false;
-      paused = false;
-      gameOver = false;
-      pauseBtn.textContent = 'Pause';
-      setFood();
-      updateStats();
-      drawBoard();
-      closeQuestionOverlay();
-      stopLoop();
-    }
-
-    function changeDirection(dir) {
-      const map = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
-      const newDir = map[dir];
-      if (!newDir) return;
-      if (snake.length > 1 && newDir.x === -direction.x && newDir.y === -direction.y) return;
-      nextDirection = newDir;
-    }
-
-    function pauseForQuestion() {
-      paused = true;
-      currentQuestion = getNextQuestion();
-      currentQuestionAttempt = 0;
-      if (!currentQuestion) {
-        paused = false;
-        return;
-      }
-      askedQuestions += 1;
-      updateStats();
-      openQuestionOverlay(currentQuestion);
-      stopLoop();
-    }
-
-    function openQuestionOverlay(question) {
-      questionMeta.textContent = `Question ${askedQuestions} of learning round`;
-      questionText.textContent = question.question;
-      feedbackBox.className = 'feedback';
-      feedbackBox.textContent = '';
-      continueBtn.classList.add('hidden');
-      retryBtn.classList.add('hidden');
-      optionsWrap.innerHTML = '';
-
-      question.options.forEach(option => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.textContent = option;
-        btn.addEventListener('click', () => handleAnswer(btn, option, question));
-        optionsWrap.appendChild(btn);
-      });
-
-      overlay.classList.add('show');
-      overlay.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeQuestionOverlay() {
-      overlay.classList.remove('show');
-      overlay.setAttribute('aria-hidden', 'true');
-      feedbackBox.className = 'feedback';
-      feedbackBox.textContent = '';
-      optionsWrap.innerHTML = '';
-      continueBtn.classList.add('hidden');
-      retryBtn.classList.add('hidden');
-    }
-
-    function setOptionButtonsEnabled(enabled) {
-      [...optionsWrap.querySelectorAll('.option-btn')].forEach(btn => {
-        btn.disabled = !enabled;
-        if (!enabled) btn.classList.add('disabled'); else btn.classList.remove('disabled');
-      });
-    }
-
-    function handleAnswer(clickedBtn, selectedOption, question) {
-      const optionButtons = [...optionsWrap.querySelectorAll('.option-btn')];
-      setOptionButtonsEnabled(false);
-      currentQuestionAttempt += 1;
-      const isCorrect = selectedOption === question.correctAnswer;
-
-      optionButtons.forEach(btn => {
-        if (btn.textContent === question.correctAnswer) btn.classList.add('correct');
-        if (btn === clickedBtn && !isCorrect) btn.classList.add('wrong');
-      });
-
-      feedbackBox.classList.add('show');
-
-      if (isCorrect) {
-        correctAnswers += 1;
-        score += CORRECT_BONUS;
-        feedbackBox.classList.add('correct');
-        feedbackBox.textContent = `Correct. ${question.explanation} The snake grows because the answer is correct.`;
-        continueBtn.classList.remove('hidden');
-        retryBtn.classList.add('hidden');
-        updateStats();
-      } else {
-        score = Math.max(0, score - WRONG_PENALTY);
-        feedbackBox.classList.add('wrong');
-        feedbackBox.textContent = `Not correct. ${question.explanation} You can retry once, or continue without growth.`;
-        retryBtn.classList.toggle('hidden', currentQuestionAttempt >= 2);
-        continueBtn.classList.remove('hidden');
-        updateStats();
-      }
-    }
-
-    function retryQuestion() {
-      feedbackBox.className = 'feedback';
-      feedbackBox.textContent = '';
-      retryBtn.classList.add('hidden');
-      continueBtn.classList.add('hidden');
-      const optionButtons = [...optionsWrap.querySelectorAll('.option-btn')];
-      optionButtons.forEach(btn => {
-        btn.disabled = false;
-        btn.className = 'option-btn';
-      });
-    }
-
-    function continueAfterQuestion() {
-      const wasCorrect = feedbackBox.classList.contains('correct');
-      if (!wasCorrect && pendingGrowth > 0) {
-        pendingGrowth = 0;
-      }
-      closeQuestionOverlay();
-      if (wasCorrect && pendingGrowth > 0) {
-        // do not remove tail on next move effect by adding one segment now at tail position
-        const tail = snake[snake.length - 1];
-        snake.push({ ...tail });
-        pendingGrowth = Math.max(0, pendingGrowth - 1);
-      } else {
-        pendingGrowth = 0;
-      }
-      if (!gameOver) {
-        paused = false;
-        running = true;
-        pauseBtn.textContent = 'Pause';
-        updateStats();
-        drawBoard();
-        startLoop();
-      }
-    }
-
-    function validateQuestionBank(data) {
-      if (!Array.isArray(data) || data.length === 0) return false;
-      return data.every(q => typeof q.id === 'string' && typeof q.question === 'string' && Array.isArray(q.options) && q.options.length === 4 && typeof q.correctAnswer === 'string' && typeof q.explanation === 'string');
-    }
-
-    async function loadQuestionsFromFile(file) {
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        if (!validateQuestionBank(parsed)) throw new Error('Invalid question format');
-        questionPool = parsed;
-        resetQuestionCycle();
-        fileStatus.textContent = `Loaded ${parsed.length} questions from ${file.name}`;
-      } catch (error) {
-        fileStatus.textContent = 'Could not load the selected JSON file. Using built-in questions.';
-        questionPool = BUILT_IN_QUESTIONS;
-        resetQuestionCycle();
-      }
-    }
-
-    document.addEventListener('keydown', (e) => {
-      const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-      if (map[e.key]) {
-        e.preventDefault();
-        changeDirection(map[e.key]);
-      }
-    });
-
-    ctrlButtons.forEach(btn => btn.addEventListener('click', () => changeDirection(btn.dataset.dir)));
-    startBtn.addEventListener('click', startGame);
-    pauseBtn.addEventListener('click', pauseGame);
-    resetBtn.addEventListener('click', resetGame);
-    continueBtn.addEventListener('click', continueAfterQuestion);
-    retryBtn.addEventListener('click', retryQuestion);
-
-    jsonFileInput.addEventListener('change', (e) => {
-      const file = e.target.files?.[0];
-      if (file) loadQuestionsFromFile(file);
-    });
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    canvas.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      touchStartX = t.clientX;
-      touchStartY = t.clientY;
-    }, { passive: true });
-    canvas.addEventListener('touchend', (e) => {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touchStartX;
-      const dy = t.clientY - touchStartY;
-      if (Math.abs(dx) > Math.abs(dy)) changeDirection(dx > 0 ? 'right' : 'left');
-      else changeDirection(dy > 0 ? 'down' : 'up');
-    }, { passive: true });
-
-    function init() {
-      questionPool = BUILT_IN_QUESTIONS;
-      setFood();
-      updateStats();
-      drawBoard();
+      resetGame();
     }
 
     init();
